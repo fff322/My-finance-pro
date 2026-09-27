@@ -1,42 +1,49 @@
-const KEY="my-finance-v1", THEME="my-finance-theme";
-const catsIncome=["Зарплата","Бизнес","Фриланс","Инвестиции","Подарок","Другое"];
-const catsExpense=["Еда","Транспорт","Жильё","Коммунальные","Покупки","Развлечения","Здоровье","Одежда","Связь/Интернет","Образование","Путешествия","Кредиты","Прочее"];
-let items=JSON.parse(localStorage.getItem(KEY)||"[]"), type="Расход";
-
+const KEY="finance_table_v1";
+const state={ops:JSON.parse(localStorage.getItem(KEY)||"[]"), edit:null};
+const cats=["Продукты","Транспорт","Жильё","Здоровье","Развлечения","Покупки","Зарплата","Фриланс","Другое"];
+const accounts=["Наличные","Банковская карта","Сбережения"];
 const $=id=>document.getElementById(id);
-function money(n){return new Intl.NumberFormat("ru-RU",{maximumFractionDigits:0}).format(n)+" ֏"}
-function save(){localStorage.setItem(KEY,JSON.stringify(items))}
-function monthKey(d){return d.slice(0,7)}
-function months(){let s=new Set(items.map(x=>monthKey(x.date)));s.add(new Date().toISOString().slice(0,7));return [...s].sort().reverse()}
-function renderMonths(){let old=$("monthFilter").value; $("monthFilter").innerHTML=months().map(m=>`<option value="${m}">${new Date(m+"-01").toLocaleDateString("ru-RU",{month:"long",year:"numeric"})}</option>`).join(""); if(months().includes(old))$("monthFilter").value=old}
-function update(){
- let inc=items.filter(x=>x.type==="Доход").reduce((a,x)=>a+x.amount,0);
- let exp=items.filter(x=>x.type==="Расход").reduce((a,x)=>a+x.amount,0);
- $("income").textContent=money(inc); $("expense").textContent=money(exp); $("balance").textContent=money(inc-exp);
- renderMonths(); renderChart(); renderHistory();
+function save(){localStorage.setItem(KEY,JSON.stringify(state.ops));render()}
+function money(n){return Number(n||0).toLocaleString("ru-RU",{maximumFractionDigits:2})+" ֏"}
+function today(){return new Date().toISOString().slice(0,10)}
+function setup(){
+ $("date").value=today();
+ cats.forEach(x=>{let o=document.createElement("option");o.textContent=x;$("category").append(o)});
+ accounts.forEach(x=>{let o=document.createElement("option");o.textContent=x;$("account").append(o)});
+ ["search","month","typeFilter","accountFilter"].forEach(id=>$(id).addEventListener("input",render));
+ $("addBtn").onclick=()=>openForm();
+ $("themeBtn").onclick=()=>{document.body.classList.toggle("dark");localStorage.setItem("dark",document.body.classList.contains("dark"))};
+ if(localStorage.getItem("dark")==="true")document.body.classList.add("dark");
+ $("form").addEventListener("submit",e=>{e.preventDefault();submitForm()});
+ $("exportBtn").onclick=()=>{const blob=new Blob([JSON.stringify(state.ops,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="moj-finansy-backup.json";a.click()};
+ $("importBtn").onclick=()=>$("fileInput").click();
+ $("fileInput").onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{state.ops=JSON.parse(r.result);save();alert("Данные восстановлены")}catch{alert("Неверный файл")}};r.readAsText(f)};
+ render();
 }
-function renderHistory(){
- let arr=[...items].sort((a,b)=>b.date.localeCompare(a.date));
- $("history").innerHTML=arr.length?arr.map(x=>`<div class="operation"><div class="op-left"><div class="op-title">${x.category}</div><div class="op-sub">${x.date}${x.description?" · "+escapeHtml(x.description):""}</div></div><div class="op-right"><div class="${x.type==="Доход"?"plus":"minus"}">${x.type==="Доход"?"+":"−"}${money(x.amount)}</div><button class="delete" onclick="removeItem('${x.id}')">Удалить</button></div></div>`).join(""):"<div class='muted'>Операций пока нет.</div>";
+function openForm(index=null){
+ state.edit=index;
+ $("dlgTitle").textContent=index===null?"Новая операция":"Редактировать операцию";
+ const x=index===null?{date:today(),type:"Расход",category:cats[0],description:"",amount:"",account:accounts[0],method:"Карта"}:state.ops[index];
+ $("date").value=x.date;$("type").value=x.type;$("category").value=x.category;$("description").value=x.description;$("amount").value=x.amount;$("account").value=x.account;$("method").value=x.method;
+ $("dlg").showModal();
 }
-function renderChart(){
- let m=$("monthFilter").value, arr=items.filter(x=>monthKey(x.date)===m);
- let inc=arr.filter(x=>x.type==="Доход").reduce((a,x)=>a+x.amount,0), exp=arr.filter(x=>x.type==="Расход").reduce((a,x)=>a+x.amount,0);
- let canvas=$("chart"),ctx=canvas.getContext("2d"),w=canvas.width=canvas.clientWidth*2,h=canvas.height=380;ctx.clearRect(0,0,w,h);ctx.scale(2,2);w/=2;h/=2;
- let max=Math.max(inc,exp,1), base=h-35, barW=Math.min(80,w/4), gap=45;
- ctx.fillStyle=getComputedStyle(document.body).color;ctx.font="14px system-ui";ctx.textAlign="center";
- [[inc,"Доходы",w/2-barW-gap/2],[exp,"Расходы",w/2+gap/2]].forEach(([v,l,x])=>{let bh=(h-70)*v/max;ctx.fillStyle=l==="Доходы"?"#22c55e":"#ef4444";ctx.fillRect(x,base-bh,barW,bh);ctx.fillStyle=getComputedStyle(document.body).color;ctx.fillText(l,x+barW/2,base+20);ctx.fillText(money(v),x+barW/2,base-bh-8)});
- let cats={};arr.filter(x=>x.type==="Расход").forEach(x=>cats[x.category]=(cats[x.category]||0)+x.amount);
- $("categoryStats").innerHTML=Object.entries(cats).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="stat"><span>${k}</span><b>${money(v)}</b></div>`).join("")||"<div class='muted'>Расходов за этот месяц нет.</div>";
+function submitForm(){
+ const x={date:$("date").value,type:$("type").value,category:$("category").value,description:$("description").value,amount:Number($("amount").value),account:$("account").value,method:$("method").value};
+ if(state.edit===null)state.ops.push(x);else state.ops[state.edit]=x;
+ $("dlg").close();save();
 }
-function escapeHtml(s){return s.replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
-function openModal(t){type=t;$("modalTitle").textContent=t==="Доход"?"Новый доход":"Новый расход";let cs=t==="Доход"?catsIncome:catsExpense;$("category").innerHTML=cs.map(x=>`<option>${x}</option>`).join("");$("amount").value="";$("description").value="";$("date").value=new Date().toISOString().slice(0,10);$("modal").classList.remove("hidden");$("amount").focus()}
-function removeItem(id){if(confirm("Удалить операцию?")){items=items.filter(x=>x.id!==id);save();update()}}
-$("addIncome").onclick=()=>openModal("Доход");$("addExpense").onclick=()=>openModal("Расход");$("closeModal").onclick=()=>$("modal").classList.add("hidden");
-$("save").onclick=()=>{let amount=Number($("amount").value);if(!amount||amount<0)return alert("Введите сумму");items.push({id:Date.now().toString(),type,category:$("category").value,description:$("description").value.trim(),date:$("date").value,amount});save();$("modal").classList.add("hidden");update()};
-$("monthFilter").onchange=renderChart;
-$("clearAll").onclick=()=>{if(items.length&&confirm("Удалить все операции?")){items=[];save();update()}};
-$("themeBtn").onclick=()=>{document.body.classList.toggle("dark");localStorage.setItem(THEME,document.body.classList.contains("dark")?"dark":"light");renderChart()};
-if(localStorage.getItem(THEME)==="dark")document.body.classList.add("dark");
-if("serviceWorker"in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js"));
-update();
+function render(){
+ const q=$("search").value.toLowerCase(), tf=$("typeFilter").value, af=$("accountFilter").value;
+ const months=[...new Set(state.ops.map(x=>x.date.slice(0,7)).filter(Boolean))].sort().reverse();
+ const old=$("month").value; $("month").innerHTML='<option value="all">Все месяцы</option>'+months.map(m=>`<option value="${m}">${m}</option>`).join(""); $("month").value=months.includes(old)?old:"all";
+ const month=$("month").value;
+ $("accountFilter").innerHTML='<option value="all">Все счета</option>'+accounts.map(a=>`<option>${a}</option>`).join("");$("accountFilter").value=af;
+ const arr=state.ops.map((x,i)=>({...x,i})).filter(x=>(!month||month==="all"||x.date.startsWith(month))&&(tf==="all"||x.type===tf)&&(af==="all"||x.account===af)&&(!q||`${x.description} ${x.category} ${x.account}`.toLowerCase().includes(q))).sort((a,b)=>b.date.localeCompare(a.date));
+ $("tbody").innerHTML=arr.map(x=>`<tr class="${x.type==="Доход"?"incomeRow":"expenseRow"}"><td>${x.date}</td><td>${x.type}</td><td>${x.category}</td><td>${x.description||"—"}</td><td>${x.type==="Доход"?"+":"−"}${money(x.amount)}</td><td>${x.account}</td><td>${x.method}</td><td><button class="delete" onclick="editRow(${x.i})">✎</button><button class="delete" onclick="delRow(${x.i})">×</button></td></tr>`).join("");
+ $("empty").style.display=arr.length?"none":"block";
+ const income=arr.filter(x=>x.type==="Доход").reduce((s,x)=>s+x.amount,0), expense=arr.filter(x=>x.type==="Расход").reduce((s,x)=>s+x.amount,0);
+ $("income").textContent=money(income);$("expense").textContent=money(expense);$("balance").textContent=money(income-expense);$("periodBalance").textContent=money(income-expense);$("count").textContent=arr.length;
+}
+window.editRow=i=>openForm(i);
+window.delRow=i=>{if(confirm("Удалить операцию?")){state.ops.splice(i,1);save()}};
+setup();
