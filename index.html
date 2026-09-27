@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="style.css">
+<title>Мои Финансы</title>
+</head>
+<body>
+<div class="app">
+  <header><h1>Мои Финансы</h1><button id="themeBtn" class="icon">☾</button></header>
+
+  <main>
+    <section class="balance-card">
+      <div class="muted">Текущий баланс</div>
+      <div id="balance" class="balance">0 ֏</div>
+      <div class="summary">
+        <div><span>Доходы</span><b id="income">0 ֏</b></div>
+        <div><span>Расходы</span><b id="expense">0 ֏</b></div>
+      </div>
+    </section>
+
+    <section class="actions">
+      <button class="primary income-btn" id="addIncome">＋ Доход</button>
+      <button class="primary expense-btn" id="addExpense">− Расход</button>
+    </section>
+
+    <section class="card">
+      <div class="section-title"><h2>Статистика</h2><select id="monthFilter"></select></div>
+      <canvas id="chart" height="190"></canvas>
+      <div id="categoryStats" class="stats"></div>
+    </section>
+
+    <section class="card">
+      <div class="section-title"><h2>История</h2><button id="clearAll" class="text-btn">Очистить</button></div>
+      <div id="history"></div>
+    </section>
+  </main>
+</div>
+
+<div id="modal" class="modal hidden">
+  <div class="modal-box">
+    <div class="section-title"><h2 id="modalTitle">Новая операция</h2><button id="closeModal" class="icon">✕</button></div>
+    <label>Сумма<input id="amount" type="number" inputmode="decimal" min="0" placeholder="0"></label>
+    <label>Категория<select id="category"></select></label>
+    <label>Описание<input id="description" type="text" placeholder="Например: продукты"></label>
+    <label>Дата<input id="date" type="date"></label>
+    <button id="save" class="save-btn">Сохранить</button>
+  </div>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
