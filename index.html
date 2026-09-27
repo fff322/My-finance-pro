@@ -54,6 +54,37 @@
   <div><span>За выбранный период</span><b id="periodBalance">0</b></div>
 </section>
 
+<section class="monthly">
+  <div class="sectionTitle">
+    <div>
+      <h2>Итоги по месяцам</h2>
+      <span>Доходы, расходы и баланс считаются автоматически</span>
+    </div>
+    <button id="goalBtn" class="goalBtn">🎯 Цель месяца</button>
+  </div>
+
+  <div class="goalCard" id="goalCard">
+    <div>
+      <span class="goalLabel">Цель на выбранный месяц</span>
+      <strong id="goalAmount">Не задана</strong>
+    </div>
+    <div class="goalProgress">
+      <div class="goalMeta"><span id="goalProgressText">0%</span><span id="goalRemaining"></span></div>
+      <div class="progress"><i id="goalBar"></i></div>
+    </div>
+    <button id="goalClear" class="goalClear" title="Удалить цель">×</button>
+  </div>
+  <div class="monthlyWrap">
+    <table class="monthlyTable">
+      <thead>
+        <tr><th>Месяц</th><th>Доходы</th><th>Расходы</th><th>Баланс</th></tr>
+      </thead>
+      <tbody id="monthlyBody"></tbody>
+      <tfoot id="monthlyFoot"></tfoot>
+    </table>
+  </div>
+</section>
+
 <dialog id="dlg">
 <form method="dialog" id="form">
 <h2 id="dlgTitle">Новая операция</h2>
